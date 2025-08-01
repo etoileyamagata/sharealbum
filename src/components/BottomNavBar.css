@@ -1,0 +1,68 @@
+.bottom-nav-insta {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  z-index: 2001;
+  height: 60px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 18px rgba(0,0,0,0.08);
+}
+
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 2.05rem;
+  color: #222;
+  padding: 0 8px;
+  outline: none;
+  cursor: pointer;
+  transition: color 0.11s;
+}
+
+.nav-btn:active {
+  color: #e95950;
+}
+
+.nav-plus {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  width: auto;
+  height: auto;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  transition: none;
+  color: inherit;
+  padding: 0;
+}
+
+
+.nav-plus:hover svg,
+.nav-plus:active svg {
+  fill: #fa7e1e;   /* インスタっぽい明るいオレンジ */
+}
+
+.nav-plus-icon {
+  font-size: 2.15rem;
+  font-weight: 700;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.nav-profile-btn img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #e95950;
+  object-fit: cover;
+  background: #fff;
+}
