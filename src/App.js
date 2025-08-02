@@ -180,7 +180,7 @@ useEffect(() => {
               name={name}
             />
 
-            <ProfileHeader posts={photos.length} />
+            <ProfileHeader posts={photos.length} onSlideShowClick={handleShowSlide} />
             <Gallery photos={photos} onPhotoClick={handlePhotoClick} />
             <Lightbox photo={selectedPhoto} onClose={handleCloseLightbox} />
             <Toast message={toastMsg} onClose={() => setToastMsg('')} />
