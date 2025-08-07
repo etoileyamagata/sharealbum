@@ -23,6 +23,8 @@ import {
 } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 import KousyouIcon from './icon/kousyou_color.png';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const PROFILE_IMG = KousyouIcon;
 
@@ -77,22 +79,39 @@ const handleUpload = async ({ name, files }) => {
   // その他の関数
   const handlePhotoClick = (photo) => setSelectedPhoto(photo);
   const handleCloseLightbox = () => setSelectedPhoto(null);
-  const handleDownloadAll = () => {
+
+  const handleDownloadAll = async () => {
   if (!photos.length) {
     alert('画像がありません');
     return;
   }
-  photos.forEach((photo, i) => {
-    const link = document.createElement('a');
-    link.href = photo.url;
-    // ファイル名生成
-    const ext = photo.url.split('.').pop().split('?')[0];
-    link.download = (photo.name || 'image') + `_${i + 1}.${ext}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const zip = new JSZip();
+  let count = 0;
+  for (const photo of photos) {
+    try {
+      // 画像データを取得
+      const res = await fetch(photo.url);
+      const blob = await res.blob();
+      // ファイル名
+      const ext = photo.url.split('.').pop().split('?')[0];
+      const name = (photo.name || 'image') + `_${count + 1}.${ext}`;
+      zip.file(name, blob);
+      count++;
+    } catch (e) {
+      // 失敗してもスキップ
+      continue;
+    }
+  }
+  if (count === 0) {
+    alert('画像の取得に失敗しました');
+    return;
+  }
+  // zip作成＆ダウンロード
+  zip.generateAsync({ type: 'blob' }).then(content => {
+    saveAs(content, 'sharealbum.zip');
   });
 };
+
 
 
   // 画像1枚削除
