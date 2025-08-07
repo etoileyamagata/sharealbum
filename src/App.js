@@ -48,6 +48,13 @@ function App() {
   const [showUpload, setShowUpload] = useState(false);
   const [showSlide, setShowSlide] = useState(false);
   const photoUploadRef = useRef(null);
+  // アップロード進行表示用のstate追加
+const [uploading, setUploading] = useState(false);
+const [uploadProgress, setUploadProgress] = useState(0);
+// 一括ダウンロード進捗用のstateを追加
+const [downloading, setDownloading] = useState(false);
+const [downloadProgress, setDownloadProgress] = useState(0);
+const [downloadMsg, setDownloadMsg] = useState('');
 
   // +ボタン押下時の処理
   const openFileDialog = () => {
@@ -67,12 +74,19 @@ function App() {
     setShowNameDialog(false);
   };
 
-  // 画像アップロード（選択時に即実行・Firebaseへ保存）
+// 画像アップロード（選択時に即実行・Firebaseへ保存）
 const handleUpload = async ({ name, files }) => {
-  for (const file of files) {
-    await uploadPhoto({ file, name });
+  setUploading(true);
+  setUploadProgress(0);
+  let successCount = 0;
+  for (let i = 0; i < files.length; i++) {
+    await uploadPhoto({ file: files[i], name });
+    setUploadProgress(Math.round(((i + 1) / files.length) * 100));
+    successCount++;
   }
-  setToastMsg(`${name}さんの画像アップロードが完了しました！`);
+  setUploading(false);
+  setUploadProgress(0);
+  setToastMsg(`${name}さんの画像アップロードが完了しました！（${successCount}枚）`);
 };
 
 
@@ -80,37 +94,54 @@ const handleUpload = async ({ name, files }) => {
   const handlePhotoClick = (photo) => setSelectedPhoto(photo);
   const handleCloseLightbox = () => setSelectedPhoto(null);
 
-  const handleDownloadAll = async () => {
+const handleDownloadAll = async () => {
   if (!photos.length) {
-    alert('画像がありません');
+    setDownloadMsg('画像がありません');
+    setTimeout(() => setDownloadMsg(''), 3000);
     return;
   }
+  setDownloading(true);
+  setDownloadProgress(0);
+  setDownloadMsg('ダウンロード準備中...');
+
   const zip = new JSZip();
   let count = 0;
-  for (const photo of photos) {
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
     try {
-      // 画像データを取得
       const res = await fetch(photo.url);
       const blob = await res.blob();
-      // ファイル名
       const ext = photo.url.split('.').pop().split('?')[0];
       const name = (photo.name || 'image') + `_${count + 1}.${ext}`;
       zip.file(name, blob);
       count++;
+      setDownloadProgress(Math.round(((i + 1) / photos.length) * 100));
     } catch (e) {
       // 失敗してもスキップ
       continue;
     }
   }
   if (count === 0) {
-    alert('画像の取得に失敗しました');
+    setDownloadMsg('画像の取得に失敗しました');
+    setDownloading(false);
+    setTimeout(() => setDownloadMsg(''), 3000);
     return;
   }
-  // zip作成＆ダウンロード
+  setDownloadMsg('zip生成中...');
   zip.generateAsync({ type: 'blob' }).then(content => {
     saveAs(content, 'sharealbum.zip');
+    setDownloadMsg('ダウンロード完了！');
+    setDownloading(false);
+    setDownloadProgress(0);
+    setTimeout(() => setDownloadMsg(''), 4000);
+  }).catch(() => {
+    setDownloadMsg('zip生成に失敗しました');
+    setDownloading(false);
+    setTimeout(() => setDownloadMsg(''), 4000);
   });
 };
+
+
 
 
 
@@ -209,11 +240,62 @@ useEffect(() => {
               </div>
             )}
             {/* 非表示inputだけ設置 */}
-            <PhotoUpload
-              ref={photoUploadRef}
-              onUpload={handleUpload}
-              name={name}
-            />
+<PhotoUpload
+  ref={photoUploadRef}
+  onUpload={handleUpload}
+  name={name}
+/>
+{uploading && (
+  <div style={{
+    position: 'fixed',
+    top: 0, left: 0, width: '100vw', height: '100vh',
+    background: 'rgba(0,0,0,0.18)',
+    zIndex: 9999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{
+      background: '#fff',
+      borderRadius: 18,
+      padding: '38px 28px 32px 28px',
+      boxShadow: '0 6px 32px #0002',
+      minWidth: 250,
+      width: '84vw',
+      maxWidth: 360,
+      textAlign: 'center'
+    }}>
+      <div style={{
+        fontWeight: 'bold', fontSize: '1.15em', marginBottom: 22, letterSpacing: '0.03em'
+      }}>
+        写真をアップロード中…
+      </div>
+      <div style={{
+        background: '#e3e9f3',
+        borderRadius: 12,
+        overflow: 'hidden',
+        height: 22,
+        marginBottom: 10,
+        boxShadow: '0 1px 4px #b5b5b522 inset'
+      }}>
+        <div style={{
+          width: `${uploadProgress}%`,
+          background: 'linear-gradient(90deg, #45aaf2, #36d1c4)',
+          height: '100%',
+          transition: 'width 0.3s'
+        }} />
+      </div>
+      <div style={{
+        fontSize: '1.04em',
+        color: '#36a1da',
+        marginTop: 4,
+        fontWeight: 600,
+        letterSpacing: '0.04em'
+      }}>
+        {uploadProgress}% 完了
+      </div>
+    </div>
+  </div>
+)}
+
 
             <ProfileHeader posts={photos.length} onSlideShowClick={handleShowSlide} />
             <Gallery photos={photos} onPhotoClick={handlePhotoClick} />
@@ -233,15 +315,44 @@ useEffect(() => {
             )}
           </div>
         } />
-        <Route path="/admin" element={
-          <AdminPanel
-            photos={photos}
-            onDeleteAll={handleDeleteAll}
-            onDownloadAll={handleDownloadAll}
-            onDeleteOne={handleDeleteOne}
-            userCount={userCount}
-          />
-        } />
+<Route path="/admin" element={
+  <div>
+    <AdminPanel
+      photos={photos}
+      onDeleteAll={handleDeleteAll}
+      onDownloadAll={handleDownloadAll}
+      onDeleteOne={handleDeleteOne}
+      userCount={userCount}
+    />
+    {downloading && (
+      <div style={{ margin: '12px 0' }}>
+        <div style={{
+          background: '#eee',
+          borderRadius: 8,
+          overflow: 'hidden',
+          height: 18,
+          width: '100%'
+        }}>
+          <div style={{
+            width: `${downloadProgress}%`,
+            background: '#43a047',
+            height: '100%',
+            transition: 'width 0.3s'
+          }} />
+        </div>
+        <div style={{ marginTop: 4, fontSize: '0.97em', color: '#43a047' }}>
+          ダウンロード中... {downloadProgress}%
+        </div>
+      </div>
+    )}
+    {downloadMsg && (
+      <div style={{ marginTop: 8, color: '#43a047', fontWeight: 'bold' }}>
+        {downloadMsg}
+      </div>
+    )}
+  </div>
+} />
+
       </Routes>
     </BrowserRouter>
   );
