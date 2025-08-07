@@ -77,7 +77,23 @@ const handleUpload = async ({ name, files }) => {
   // その他の関数
   const handlePhotoClick = (photo) => setSelectedPhoto(photo);
   const handleCloseLightbox = () => setSelectedPhoto(null);
-  const handleDownloadAll = () => alert('一括DLは後ほど案内');
+  const handleDownloadAll = () => {
+  if (!photos.length) {
+    alert('画像がありません');
+    return;
+  }
+  photos.forEach((photo, i) => {
+    const link = document.createElement('a');
+    link.href = photo.url;
+    // ファイル名生成
+    const ext = photo.url.split('.').pop().split('?')[0];
+    link.download = (photo.name || 'image') + `_${i + 1}.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+};
+
 
   // 画像1枚削除
   const handleDeleteOne = async (id) => {
