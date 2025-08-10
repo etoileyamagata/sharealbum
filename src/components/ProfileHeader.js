@@ -3,9 +3,9 @@ import './ProfileHeader.css';
 import KousyouIcon from '../icon/kousyou_color.png';
 
 function ProfileHeader(props) {
-  const posts = 35;
-  const followers = 122;
-  const following = 77;
+  const posts = 47;
+  const followers = 54;
+  const following = 195;
 
   return (
     <>
