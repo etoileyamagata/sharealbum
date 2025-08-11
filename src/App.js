@@ -68,6 +68,10 @@ function App() {
   const [cacheProgress, setCacheProgress] = useState(0);
   const [cacheMsg, setCacheMsg] = useState('');
 
+  // ★初回ロード可視化（スケルトン & 遅延メッセージ）
+  const [firstLoading, setFirstLoading] = useState(true);
+  const [slowLoadMsg, setSlowLoadMsg] = useState('');
+
   // ★プリフェッチ制御（常時有効）
   const [prefetching, setPrefetching] = useState(false);
   const [prefetchProgress, setPrefetchProgress] = useState(0);
@@ -397,6 +401,19 @@ const handleDownloadAll = async () => {
 
   const userCount = 3;
 
+// ★初回読込が長い場合の案内メッセージ（2.5秒後に表示）
+useEffect(() => {
+  if (!firstLoading) {
+    setSlowLoadMsg('');
+    return;
+  }
+  const id = setTimeout(() => {
+    setSlowLoadMsg('写真を読み込んでいます… 少しお待ちください');
+  }, 2500);
+  return () => clearTimeout(id);
+}, [firstLoading]);
+
+
   const handleShowSlide = () => {
     const elem = document.documentElement;
     if (elem.requestFullscreen) elem.requestFullscreen();
@@ -410,6 +427,12 @@ useEffect(() => {
   const unsub = onSnapshot(q, snap => {
     const nextPhotos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setPhotos(nextPhotos);
+
+    // ★ロード完了は「サーバー応答（fromCache=false）」を受けてからにする
+    //    これにより、モバイルで「キャッシュの空スナップショット」でfirstLoadingが即falseになり“無表示”になる問題を回避
+    if (!snap.metadata.fromCache) {
+      setFirstLoading(false);
+    }
 
     // 新規追加の検知
     const currentIds = nextPhotos.map(p => p.id);
@@ -510,6 +533,42 @@ useEffect(() => {
 
 
             <ProfileHeader posts={photos.length} onSlideShowClick={handleShowSlide} />
+
+            {/* ★初回ロード中はスケルトンと案内を表示 */}
+            {firstLoading && (
+              <>
+                {slowLoadMsg && (
+                  <div style={{ margin: '8px 0', color: '#1976d2', fontWeight: 'bold' }}>
+                    {slowLoadMsg}
+                  </div>
+                )}
+                <div className="gallery-grid">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={`sk-${i}`} className="gallery-item">
+                      <div style={{
+                        width: '100%',
+                        paddingTop: '100%',
+                        borderRadius: 8,
+                        background: '#eceff1'
+                      }} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ★ロード完了したが写真が無い場合の空表示 */}
+            {!firstLoading && photos.length === 0 && (
+              <div style={{
+                margin: '12px 0 10px',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: '#f5f7fa',
+                color: '#607d8b'
+              }}>
+                まだ写真がありません。アップロードをお待ちください。
+              </div>
+            )}
 
             {/* ★選択ダウンロード用UI（全選択・全解除を追加） */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '8px 0 10px 0' }}>
